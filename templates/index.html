@@ -55,8 +55,17 @@
                 <label for="end_city" class="form-label">Destination City</label>
                 <input type="text" class="form-control" id="end_city" name="end_city" placeholder="Enter the destination city" required>
             </div>
+            <div class="mb-3">
+                <label for="interval" class="form-label">Interval (Hours)</label>
+                <select class="form-control" id="interval" name="interval">
+                    <option value="1">Next 1 Hour</option>
+                    <option value="3">Next 3 Hours</option>
+                    <option value="5">Next 5 Hours</option>
+                </select>
+            </div>
             <button type="submit" class="btn btn-primary w-100">Check Weather</button>
         </form>
+
 
         {% if results %}
             <h2 class="text-center mb-3">Results</h2>
