@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 import requests
-
+from requests.exceptions import ConnectionError, Timeout, HTTPError
 app = Flask(__name__)
 
 API_KEY = "a92e99aa09fde9b14642dd11c894bc8c"
@@ -38,10 +38,10 @@ def get_weather_data(cities, interval):
             'units': 'metric'
         }
         try:
-            response = requests.get(BASE_URL_FORECAST, params=params)
-            response.raise_for_status()
+            response = requests.get(BASE_URL_FORECAST, params=params, timeout=5)
+            response.raise_for_status()  # Генерирует HTTPError для 4xx/5xx
+
             forecast_data = response.json()
-            # Выбираем ближайшее время
             forecast_list = forecast_data['list']
             if interval == "1":
                 forecast = forecast_list[0]
@@ -50,7 +50,7 @@ def get_weather_data(cities, interval):
             elif interval == "5":
                 forecast = forecast_list[2]
             else:
-                forecast = forecast_list[0]  # По умолчанию ближайший час
+                forecast = forecast_list[0]
 
             city_data = {
                 'City': city,
@@ -61,15 +61,45 @@ def get_weather_data(cities, interval):
                 'Description': forecast['weather'][0]['description'].capitalize()
             }
             data.append(city_data)
-        except requests.exceptions.RequestException as e:
-            print(f"Ошибка API для города {city}: {str(e)}")
+        except ConnectionError:
             data.append({
                 'City': city,
                 'Temperature': None,
                 'Humidity': None,
                 'Wind_Speed': None,
                 'Rain_Probability': None,
-                'Description': "Данные недоступны"
+                'Description': "Ошибка подключения к серверу."
+            })
+        except Timeout:
+            data.append({
+                'City': city,
+                'Temperature': None,
+                'Humidity': None,
+                'Wind_Speed': None,
+                'Rain_Probability': None,
+                'Description': "Превышено время ожидания ответа от сервера."
+            })
+        except HTTPError as e:
+            if response.status_code == 404:
+                error_desc = "Город не найден. Проверьте название."
+            else:
+                error_desc = f"Ошибка сервера: {response.status_code}"
+            data.append({
+                'City': city,
+                'Temperature': None,
+                'Humidity': None,
+                'Wind_Speed': None,
+                'Rain_Probability': None,
+                'Description': error_desc
+            })
+        except Exception as e:
+            data.append({
+                'City': city,
+                'Temperature': None,
+                'Humidity': None,
+                'Wind_Speed': None,
+                'Rain_Probability': None,
+                'Description': f"Неизвестная ошибка: {str(e)}"
             })
     return data
 
@@ -89,7 +119,9 @@ def index():
         else:
             weather_data = get_weather_data([start_city, end_city], interval)
             for city_data in weather_data:
-                try:
+                if city_data['Description'].startswith("Ошибка"):
+                    error_message = city_data['Description']
+                else:
                     results.append({
                         'City': city_data['City'],
                         'Temperature': city_data.get('Temperature', 'Нет данных'),
@@ -103,19 +135,8 @@ def index():
                             city_data.get('Rain_Probability', 0)
                         )
                     })
-                except Exception as e:
-                    results.append({
-                        'City': city_data['City'],
-                        'Temperature': 'Ошибка',
-                        'Humidity': 'Ошибка',
-                        'Wind_Speed': 'Ошибка',
-                        'Rain_Probability': 'Ошибка',
-                        'Description': f'Ошибка: {str(e)}',
-                        'weather_status': 'Невозможно оценить погоду.'
-                    })
 
     return render_template('index.html', results=results, error=error_message)
-
 
 if __name__ == "__main__":
     app.run(debug=True)
