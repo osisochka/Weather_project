@@ -62,9 +62,14 @@
             <h2 class="text-center mb-3">Results</h2>
             <ul class="list-group">
                 {% for result in results %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>{{ result.City }}</span>
-                        <span class="badge bg-info text-dark">{{ result.weather_status }}</span>
+                    <li class="list-group-item">
+                        <h5>{{ result.City }}</h5>
+                        <p>Температура: {{ result.Temperature or 'Нет данных' }}°C</p>
+                        <p>Влажность: {{ result.Humidity or 'Нет данных' }}%</p>
+                        <p>Скорость ветра: {{ result.Wind_Speed or 'Нет данных' }} м/с</p>
+                        <p>Вероятность осадков: {{ result.Rain_Probability or 'Нет данных' }} мм</p>
+                        <p>Описание: {{ result.Description }}</p>
+                        <p><strong>Погодный статус:</strong> {{ result.weather_status }}</p>
                     </li>
                 {% endfor %}
             </ul>

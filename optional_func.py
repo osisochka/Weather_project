@@ -8,9 +8,6 @@ BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 
 def get_weather_data(cities):
-    """
-    Получает погодные данные для списка городов.
-    """
     data = []
     for city in cities:
         params = {
@@ -18,26 +15,37 @@ def get_weather_data(cities):
             'appid': API_KEY,
             'units': 'metric'
         }
-        response = requests.get(BASE_URL, params=params)
-        if response.status_code == 200:
+        try:
+            response = requests.get(BASE_URL, params=params)
+            response.raise_for_status()
             weather_data = response.json()
             city_data = {
                 'City': city,
                 'Temperature': weather_data['main']['temp'],
                 'Humidity': weather_data['main']['humidity'],
-                'Wind Speed': weather_data['wind']['speed'],
-                'Rain Probability': weather_data.get('rain', {}).get('1h', 0)  # мм осадков за последний час
+                'Wind_Speed': weather_data['wind']['speed'],  # Подчеркивание вместо пробела
+                'Rain_Probability': weather_data.get('rain', {}).get('1h', 0),  # Подчеркивание вместо пробела
+                'Description': weather_data['weather'][0]['description'].capitalize()
             }
             data.append(city_data)
-        else:
-            print(f"Не удалось получить данные для {city}: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Ошибка API для города {city}: {str(e)}")
+            data.append({
+                'City': city,
+                'Temperature': None,
+                'Humidity': None,
+                'Wind_Speed': None,  # Подчеркивание вместо пробела
+                'Rain_Probability': None,  # Подчеркивание вместо пробела
+                'Description': "Данные недоступны"
+            })
     return data
 
 
+
+
 def check_bad_weather(temp, wind, rain):
-    """
-    Проверяет неблагоприятные погодные условия.
-    """
+    if temp is None:
+        return "Невозможно оценить погоду."
     comments = []
     if temp < 10:
         comments.append("Очень холодно!")
@@ -52,6 +60,7 @@ def check_bad_weather(temp, wind, rain):
     return ", ".join(comments)
 
 
+
 @app.route("/", methods=['GET', 'POST'])
 def index():
     results = []
@@ -64,19 +73,33 @@ def index():
         if not start_city or not end_city:
             error_message = "Введите оба города!"
         else:
-            try:
-                weather_data = get_weather_data([start_city, end_city])
-                for city_data in weather_data:
+            weather_data = get_weather_data([start_city, end_city])
+            for city_data in weather_data:
+                try:
                     results.append({
                         'City': city_data['City'],
+                        'Temperature': city_data.get('Temperature', 'Нет данных'),
+                        'Humidity': city_data.get('Humidity', 'Нет данных'),
+                        'Wind_Speed': city_data.get('Wind_Speed', 'Нет данных'),
+                        'Rain_Probability': city_data.get('Rain_Probability', 'Нет данных'),
+                        'Description': city_data.get('Description', 'Нет данных'),
                         'weather_status': check_bad_weather(
-                            city_data['Temperature'],
-                            city_data['Wind Speed'],
-                            city_data['Rain Probability']
+                            city_data.get('Temperature'),
+                            city_data.get('Wind_Speed', 0),  # Если нет данных о ветре, устанавливаем 0
+                            city_data.get('Rain_Probability', 0)  # Если нет данных о дожде, устанавливаем 0
                         )
                     })
-            except Exception as e:
-                error_message = f"Ошибка при получении данных: {str(e)}"
+                except Exception as e:
+                    # Добавляем информацию об ошибке в результат, если что-то пошло не так
+                    results.append({
+                        'City': city_data['City'],
+                        'Temperature': 'Ошибка',
+                        'Humidity': 'Ошибка',
+                        'Wind_Speed': 'Ошибка',
+                        'Rain_Probability': 'Ошибка',
+                        'Description': f'Ошибка: {str(e)}',
+                        'weather_status': 'Невозможно оценить погоду.'
+                    })
 
     return render_template('index.html', results=results, error=error_message)
 
