@@ -3,12 +3,13 @@ import requests
 from requests.exceptions import ConnectionError, Timeout, HTTPError
 app = Flask(__name__)
 
+#здесь лежат данные для запросов
 API_KEY = "a92e99aa09fde9b14642dd11c894bc8c"
-BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
-BASE_URL_FORECAST = "https://api.openweathermap.org/data/2.5/forecast"
+#BASE_URL = "https://api.openweathermap.org/data/2.5/weather" #для обычной инфы по погоде
+BASE_URL_FORECAST = "https://api.openweathermap.org/data/2.5/forecast" #для погоды с интервалами
 
 
-
+#Здесь описаны оценочные суждения по ощущению погоды
 def check_bad_weather(temp, wind, rain):
     if temp is None:
         return "Невозможно оценить погоду."
@@ -30,6 +31,12 @@ def check_bad_weather(temp, wind, rain):
 
 
 def get_weather_data(cities, interval):
+    '''
+    Функция позволяет безболезненно для
+    количества запросов получить все
+    данные о погоде
+    господь, храни открытые апишки
+    '''
     data = []
     for city in cities:
         params = {
@@ -61,7 +68,7 @@ def get_weather_data(cities, interval):
                 'Description': forecast['weather'][0]['description'].capitalize()
             }
             data.append(city_data)
-        except ConnectionError:
+        except ConnectionError: #Подключение не удалось
             data.append({
                 'City': city,
                 'Temperature': None,
@@ -70,7 +77,7 @@ def get_weather_data(cities, interval):
                 'Rain_Probability': None,
                 'Description': "Ошибка подключения к серверу."
             })
-        except Timeout:
+        except Timeout: #что-то пошло не так с ответом
             data.append({
                 'City': city,
                 'Temperature': None,
@@ -79,7 +86,7 @@ def get_weather_data(cities, interval):
                 'Rain_Probability': None,
                 'Description': "Превышено время ожидания ответа от сервера."
             })
-        except HTTPError as e:
+        except HTTPError as e: #Пользователь неправильно ввёл название города
             if response.status_code == 404:
                 error_desc = "Город не найден. Проверьте название."
             else:
@@ -92,7 +99,7 @@ def get_weather_data(cities, interval):
                 'Rain_Probability': None,
                 'Description': error_desc
             })
-        except Exception as e:
+        except Exception as e: # Перехватываем все ошибки
             data.append({
                 'City': city,
                 'Temperature': None,
