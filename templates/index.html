@@ -55,16 +55,30 @@
                 <label for="end_city" class="form-label">Destination City</label>
                 <input type="text" class="form-control" id="end_city" name="end_city" placeholder="Enter the destination city" required>
             </div>
+            <div class="mb-3">
+                <label for="interval" class="form-label">Interval (Hours)</label>
+                <select class="form-control" id="interval" name="interval">
+                    <option value="1">Next 1 Hour</option>
+                    <option value="3">Next 3 Hours</option>
+                    <option value="5">Next 5 Hours</option>
+                </select>
+            </div>
             <button type="submit" class="btn btn-primary w-100">Check Weather</button>
         </form>
+
 
         {% if results %}
             <h2 class="text-center mb-3">Results</h2>
             <ul class="list-group">
                 {% for result in results %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>{{ result.City }}</span>
-                        <span class="badge bg-info text-dark">{{ result.weather_status }}</span>
+                    <li class="list-group-item">
+                        <h5>{{ result.City }}</h5>
+                        <p>Температура: {{ result.Temperature or 'Нет данных' }}°C</p>
+                        <p>Влажность: {{ result.Humidity or 'Нет данных' }}%</p>
+                        <p>Скорость ветра: {{ result.Wind_Speed or 'Нет данных' }} м/с</p>
+                        <p>Вероятность осадков: {{ result.Rain_Probability or 'Нет данных' }} мм</p>
+                        <p>Описание: {{ result.Description }}</p>
+                        <p><strong>Погодный статус:</strong> {{ result.weather_status }}</p>
                     </li>
                 {% endfor %}
             </ul>
